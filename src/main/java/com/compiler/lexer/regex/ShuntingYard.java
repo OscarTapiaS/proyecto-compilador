@@ -1,10 +1,8 @@
 package com.compiler.lexer.regex;
 
+import java.util.Stack;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Stack;
-import java.lang.StringBuilder;
-
 
 /**
  * Utility class for regular expression parsing using the Shunting Yard
@@ -14,13 +12,16 @@ import java.lang.StringBuilder;
  * concatenation operators, and to convert infix regular expressions to postfix
  * notation for easier parsing and NFA construction.
  */
+/**
+ * Utility class for regular expression parsing using the Shunting Yard
+ * algorithm.
+ */
 public class ShuntingYard {
 
     /**
      * Default constructor for ShuntingYard.
      */
     public ShuntingYard() {
-        // Constructor doesn't need specific implementation
     }
 
     /**
@@ -32,45 +33,44 @@ public class ShuntingYard {
      * @return Regular expression with explicit concatenation operators.
      */
     public static String insertConcatenationOperator(String regex) {
-        // TODO: Implement insertConcatenationOperator
-        /*
-            Pseudocode:
-            For each character in regex:
+
+        // Check for null or empty input
+        if (regex.isEmpty() || regex == null) {
+            return regex;
+        } else {
+
+            // Initialize output string
+            String salida = "";
+
+            /*  
+                Iterate through each character in the regex:
                 - Append current character to output
                 - If not at end of string:
-                        - Check if current and next character form an implicit concatenation
-                        - If so, append '·' to output
-            Return output as string
-         */
-
-
-        if (regex == null || regex.isEmpty()) {
-            return regex;
-        }
-        StringBuilder output = new StringBuilder();
-        // Iterate through the regex characters
-        for (int i = 0; i < regex.length(); i++) {
-            char current = regex.charAt(i);
-            output.append(current);
-            
-            // If not at the last character, check whether concatenation is needed
-            if (i < regex.length() - 1) {
-                char next = regex.charAt(i + 1);
-                boolean needsConcatenation = false;
-                
-                if ((isOperand(current) || current == ')' || current == '*' || 
-                     current == '+' || current == '?') &&
-                    (isOperand(next) || next == '(')) {
-                    needsConcatenation = true;
-                }
-                
-                if (needsConcatenation) {
-                    output.append('·');
+                    - Check if current and next character form an implicit concatenation
+                    - If so, append '·' to output
+                Return output as string 
+            */
+            for (int i = 0; i < regex.length(); i++) {
+                // Get current character
+                char caracActual = regex.charAt(i);
+                // Append current character to output
+                salida += caracActual;
+                // If not at the end of the string, check for implicit concatenation
+                if (i < regex.length() - 1) {
+                    // Get next character
+                    char siguiente = regex.charAt(i + 1);
+                    // Check if we need to insert concatenation operator
+                    // Conditions for implicit concatenation:
+                    if ((isOperand(caracActual) || caracActual == ')' || caracActual == '*' || caracActual == '+' 
+                        || caracActual == '?') && (isOperand(siguiente) || siguiente == '(')) {
+                        // Insert concatenation operator
+                        salida += '·';
+                    }
                 }
             }
+            // Return the modified regex with explicit concatenation operators
+            return salida;
         }
-        
-        return output.toString();
     }
 
     /**
@@ -81,14 +81,12 @@ public class ShuntingYard {
      * @return true if it is an operand, false otherwise.
      */
     private static boolean isOperand(char c) {
-        // TODO: Implement isOperand
-        /*
-        Pseudocode:
-        Return true if c is not one of: '|', '*', '?', '+', '(', ')', '·'
-         */
-
-
-        return c != '|' && c != '*' && c != '?' && c != '+' && c != '(' && c != ')' && c != '·';
+        // Return true if c is not one of: '|', '*', '?', '+', '(', ')', '·'
+        if(c == '|' || c == '*' || c == '?' || c == '+' || c == '(' || c == ')' || c == '·') {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /**
@@ -100,65 +98,65 @@ public class ShuntingYard {
      * @return Regular expression in postfix notation.
      */
     public static String toPostfix(String infixRegex) {
-
-        // TODO: Implement toPostfix
-        /*
-        Pseudocode:
-        1. Define operator precedence map
-        2. Preprocess regex to insert explicit concatenation operators
-        3. For each character in regex:
-            - If operand: append to output
-            - If '(': push to stack
-            - If ')': pop operators to output until '(' is found
-            - If operator: pop operators with higher/equal precedence, then push current operator
-        4. After loop, pop remaining operators to output
-        5. Return output as string
-        */
-
-        Map<Character, Integer> precedence = new HashMap<>();
-        precedence.put('|', 1);  
-        precedence.put('·', 2);  
-        precedence.put('*', 3);  
-        precedence.put('+', 3);  
-        precedence.put('?', 3);  
-
-
-        // Step 1: preprocess the regex to add explicit concatenations
-        String preprocessed = insertConcatenationOperator(infixRegex);
-        StringBuilder output = new StringBuilder();
-        Stack<Character> operatorStack = new Stack<>();
         
-        // Step 2: iterate through characters in the regex
-        for (char c : preprocessed.toCharArray()) {
-            if (isOperand(c)) {
-                output.append(c);
-            } else if (c == '(') {
-                operatorStack.push(c);
-            } else if (c == ')') {
-                while (!operatorStack.isEmpty() && operatorStack.peek() != '(') {
-                    output.append(operatorStack.pop());
+        // 1. Define operator precedence map
+        Map<Character, Integer> precendenciaOp = new HashMap<>();
+        precendenciaOp.put('*', 3); 
+        precendenciaOp.put('+', 3);  
+        precendenciaOp.put('·', 2);
+        precendenciaOp.put('?', 3);
+        precendenciaOp.put('|', 1);
+
+        // 2. Preprocess regex to insert explicit concatenation operators
+        String infixRegexPreprocessed = insertConcatenationOperator(infixRegex);
+
+        // Output regex in postfix notation
+        String salida = "";
+
+        // Stack for operators
+        Stack<Character> pila_op = new Stack<>();
+
+        /*
+            3. For each character in regex:
+                - If operand: append to output
+                - If '(': push to stack
+                - If ')': pop operators to output until '(' is found
+                - If operator: pop operators with higher/equal precedence, then push current operator
+        */
+        for (int i = 0; i < infixRegexPreprocessed.length(); i++) {
+            char caracter = infixRegexPreprocessed.charAt(i);
+
+            if (isOperand(caracter) == true) {
+                salida += caracter;
+            } else if (caracter == '(') {
+                pila_op.push(caracter);
+            } else if (caracter == ')') {
+                while (pila_op.isEmpty() == false && pila_op.peek() != '(') {
+                    salida += pila_op.pop();
                 }
-                
-                if (!operatorStack.isEmpty()) {
-                    operatorStack.pop();
+
+                if (pila_op.isEmpty() == false) {
+                    pila_op.pop();
                 }
-            } else if (precedence.containsKey(c)) {
-                
-                while (!operatorStack.isEmpty() && 
-                       operatorStack.peek() != '(' &&
-                       precedence.containsKey(operatorStack.peek()) &&
-                       precedence.get(operatorStack.peek()) >= precedence.get(c)) {
-                    output.append(operatorStack.pop());
+
+            } else if (precendenciaOp.containsKey(caracter)) {
+                // If operator, pop operators with higher or equal precedence
+                while (pila_op.isEmpty() == false && !(pila_op.peek() == '(') && precendenciaOp.containsKey(pila_op.peek()) 
+                    && precendenciaOp.get(pila_op.peek()) >= precendenciaOp.get(caracter)) 
+                    { 
+                        salida += pila_op.pop();
                 }
-                operatorStack.push(c);
+
+                pila_op.push(caracter);
             }
         }
-        
-        // Pop remaining operators from the stack
-        while (!operatorStack.isEmpty()) {
-            output.append(operatorStack.pop());
+
+        // 4. After loop, pop remaining operators to output
+        while (pila_op.isEmpty() == false) {
+            salida += pila_op.pop();
         }
-        
-        return output.toString();
-    }
+
+        // 5. Return output as string
+        return salida;
+    }     
 }

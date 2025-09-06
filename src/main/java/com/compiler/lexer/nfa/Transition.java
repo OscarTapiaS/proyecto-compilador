@@ -26,8 +26,7 @@ public class Transition {
      * @param toState The destination state.
      */
     public Transition(Character symbol, State toState) {
-        // TODO: Implement constructor
-        this.symbol = symbol; // Store symbol (can be null for epsilon)
-        this.toState = toState; // Store reference to the target state
+        this.symbol = symbol;
+        this.toState = toState;
     }
 }

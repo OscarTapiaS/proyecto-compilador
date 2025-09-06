@@ -1,7 +1,7 @@
 package com.compiler.lexer.nfa;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Represents a state in a Non-deterministic Finite Automaton (NFA).
@@ -23,7 +23,6 @@ import java.util.List;
  */
 public class State {
     private static int nextId = 0;
-    
     /**
      * Unique identifier for this state.
      */
@@ -44,11 +43,9 @@ public class State {
      * The state is not final by default.
      */
     public State() {
-        // TODO: Implement constructor
-
-        this.id = nextId++;             // Assign unique ID and increment for next state
-        this.transitions = new ArrayList<>();   // Initialize empty list of transitions
-        this.isFinal = false;   // State starts as non-final
+        this.id = nextId++;
+        this.transitions = new ArrayList<>();
+        this.isFinal = false;
     }
 
     /**
@@ -56,8 +53,11 @@ public class State {
      * @return true if this state is final, false otherwise
      */
     public boolean isFinal() {
-         // TODO: Implement isFinal
-        return this.isFinal;
+        if(this.isFinal) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -65,16 +65,13 @@ public class State {
      * @return a list of states reachable by epsilon transitions
      */
     public List<State> getEpsilonTransitions() {
-        // TODO: Implement getEpsilonTransitions
-        // Pseudocode: Iterate over transitions, if symbol is null, add to result list
-        List<State> epsilonStates = new ArrayList<>();
-
-        for (Transition transition : transitions) {
-            if (transition.symbol == null) { // Null indicates epsilon transition
-                epsilonStates.add(transition.toState);
+        List<State> estadosEpsilon = new ArrayList<>();
+        for(Transition t : transitions) {
+            if(t.symbol == null) {
+                estadosEpsilon.add(t.toState);
             }
         }
-        return epsilonStates;
+        return estadosEpsilon;
     }
 
     /**
@@ -83,16 +80,12 @@ public class State {
      * @return a list of states reachable by the given symbol
      */
     public List<State> getTransitions(char symbol) {
-        // TODO: Implement getTransitions
-        // Pseudocode: Iterate over transitions, if symbol matches, add to result list
-        List<State> symbolStates = new ArrayList<>();
-
-        for (Transition transition : transitions) {
-            // Only match transitions that are not epsilon and equal to the symbol
-            if (transition.symbol != null && transition.symbol == symbol) {
-                symbolStates.add(transition.toState);
+        List<State> estadosSimb = new ArrayList<>();
+        for(Transition t : transitions) {
+            if( t.symbol != null && t.symbol == symbol) {
+                estadosSimb.add(t.toState);
             }
         }
-        return symbolStates;
+        return estadosSimb;
     }
 }
