@@ -1,9 +1,9 @@
 package com.compiler.lexer.regex;
 
-import com.compiler.lexer.nfa.NFA;
+import java.util.Stack;
 import com.compiler.lexer.nfa.State;
 import com.compiler.lexer.nfa.Transition;
-import java.util.Stack;
+import com.compiler.lexer.nfa.NFA;
 
 /**
  * RegexParser
@@ -24,12 +24,15 @@ import java.util.Stack;
  *     NFA nfa = parser.parse("a(b|c)*");
  * </pre>
  */
+
+/**
+ * Parses regular expressions and constructs NFAs using Thompson's construction.
+ */
 public class RegexParser {
     /**
      * Default constructor for RegexParser.
      */
     public RegexParser() {
-        // Constructor doesn't need specific implementation
     }
 
     /**
@@ -39,15 +42,10 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     public NFA parse(String infixRegex) {
-        // TODO: Implement parse
         // Pseudocode: Convert infix to postfix, then build NFA from postfix
-
-
-        // Step 1: Convert infix to postfix using Shunting Yard
         String postfixRegex = ShuntingYard.toPostfix(infixRegex);
-        
-        // Step 2: Build the NFA from postfix form
         return buildNfaFromPostfix(postfixRegex);
+
     }
 
     /**
@@ -57,43 +55,34 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     private NFA buildNfaFromPostfix(String postfixRegex) {
-        // TODO: Implement buildNfaFromPostfix
         // Pseudocode: For each char in postfix, handle operators and operands using a stack
 
-        Stack<NFA> nfaStack = new Stack<>();
-        
-        for (char c : postfixRegex.toCharArray()) {
-            if (isOperand(c)) {
-                NFA basicNfa = createNfaForCharacter(c);
-                nfaStack.push(basicNfa);
+        // Stack initialized
+        Stack<NFA> pila = new Stack<>();
+
+        for (int i = 0; i < postfixRegex.length(); i++) {
+
+            char caracter = postfixRegex.charAt(i);
+
+            if (isOperand(caracter)) {
+                NFA automataUnSoloCaracter = createNfaForCharacter(caracter);
+                pila.push(automataUnSoloCaracter);
+            } else if (caracter == '|') {
+                handleUnion(pila);
+            } else if (caracter == '·' ) {
+                handleConcatenation(pila);
+            } else if (caracter == '?') {
+                handleOptional(pila);
+            } else if (caracter == '+') {
+                handlePlus(pila);
+            } else if (caracter == '*') {
+                handleKleeneStar(pila);
             } else {
-                switch (c) {
-                    case '·':
-                        handleConcatenation(nfaStack);
-                        break;
-                    case '|':
-                        handleUnion(nfaStack);
-                        break;
-                    case '*':
-                        handleKleeneStar(nfaStack);
-                        break;
-                    case '+':
-                        handlePlus(nfaStack);
-                        break;
-                    case '?':
-                        handleOptional(nfaStack);
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unknown operator: " + c);
-                }
+                throw new IllegalArgumentException("Error. Operador no válido: " + caracter);
             }
         }
-        // At the end, only one NFA should remain
-        if (nfaStack.size() != 1) {
-            throw new IllegalStateException("Invalid postfix expression");
-        }
         
-        return nfaStack.pop();
+        return pila.pop();
     }
 
     /**
@@ -102,21 +91,30 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleOptional(Stack<NFA> stack) {
-        // TODO: Implement handleOptional
         // Pseudocode: Pop NFA, create new start/end, add epsilon transitions for zero/one occurrence
-
         if (stack.isEmpty()) {
-            throw new IllegalStateException("Stack is empty for optional operation");
+            throw new IllegalStateException("Error. La pila está vacía. No es posible usar el operador 'opcional' (?).");
         }
         
-        NFA nfa = stack.pop();
-        State newStart = new State();
-        State newEnd = new State();
-        newStart.transitions.add(new Transition(null, nfa.startState)); 
-        newStart.transitions.add(new Transition(null, newEnd));
-        nfa.endState.transitions.add(new Transition(null, newEnd));
-        nfa.endState.isFinal = false;        
-        stack.push(new NFA(newStart, newEnd));
+        NFA atfn = stack.pop(); // Pop the NFA to apply ? to
+        
+        State inicialN = new State(); // New start state
+        State finalN = new State(); // New end state
+        
+        // Epsilon transition: nuevo inicial -> inicial anterior (una rep.)
+        inicialN.transitions.add(new Transition(null, atfn.startState));
+        
+        // Epsilon transition: nuevo inicial -> nuevo final (cero rep.)
+        inicialN.transitions.add(new Transition(null, finalN));
+        
+        // Epsilon transition: final anterior -> nuevo final
+        atfn.endState.transitions.add(new Transition(null, finalN));
+
+        // Old end state is no longer final
+        atfn.endState.isFinal = false;
+        
+        // Push the new NFA onto the stack
+        stack.push(new NFA(inicialN, finalN));
     }
 
     /**
@@ -125,25 +123,29 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handlePlus(Stack<NFA> stack) {
-        // TODO: Implement handlePlus
         // Pseudocode: Pop NFA, create new start/end, add transitions for one or more occurrence
-
         if (stack.isEmpty()) {
-            throw new IllegalStateException("Stack is empty for plus operation");
+            throw new IllegalStateException("Error: la pila está vacía. No es posible usar el operador 'más' (+).");
         }
-        
-        NFA nfa = stack.pop();
-        State newStart = new State();
-        State newEnd = new State();
-        
-        // First occurrence: epsilon to old start
-        newStart.transitions.add(new Transition(null, nfa.startState));        
-        // Old end loops back to start (for repetition)
-        nfa.endState.transitions.add(new Transition(null, newEnd));        
-        // Old end can also go to newEnd (to finish)
-        nfa.endState.transitions.add(new Transition(null, nfa.startState));
-        nfa.endState.isFinal = false;        
-        stack.push(new NFA(newStart, newEnd));
+            State inicioN = new State(); // New start state
+            State finalN = new State(); // New end state
+
+            NFA atfn = stack.pop(); // Pop the NFA to apply Plus to
+
+            // Epsilon transition: nuevo inicial -> incial anterior
+            inicioN.transitions.add(new Transition(null, atfn.startState));
+
+            // Epsilon transition: final antrior -> inicial anterior
+            atfn.endState.transitions.add(new Transition(null, atfn.startState));
+
+            // Epsilon transition: final anterior -> nuevo final
+            atfn.endState.transitions.add(new Transition(null, finalN));
+
+            // Old end state is no longer final
+            atfn.endState.isFinal = false;
+
+            // Push the new NFA onto the stack
+            stack.push(new NFA(inicioN, finalN));
     }
     
     /**
@@ -152,14 +154,15 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     private NFA createNfaForCharacter(char c) {
-        // TODO: Implement createNfaForCharacter
         // Pseudocode: Create start/end state, add transition for character
-
-        State start = new State();
-        State end = new State();
-        start.transitions.add(new Transition(c, end));
+        State inicio = new State(); // Start state
+        State fin = new State(); // End state
         
-        return new NFA(start, end);
+        // Transition for the character c
+        inicio.transitions.add(new Transition(c, fin));
+
+        // We create and return the NFA
+        return new NFA(inicio, fin);
     }
 
     /**
@@ -168,22 +171,22 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleConcatenation(Stack<NFA> stack) {
-        // TODO: Implement handleConcatenation
         // Pseudocode: Pop two NFAs, connect end of first to start of second
-
         if (stack.size() < 2) {
-            throw new IllegalStateException("Not enough NFAs for concatenation");
-        }
-        
-        NFA second = stack.pop();
-        NFA first = stack.pop();
-        
-        
-        first.endState.transitions.add(new Transition(null, second.startState));
-        first.endState.isFinal = false;
-        
-        
-        stack.push(new NFA(first.startState, second.endState));
+            throw new IllegalStateException("Error: Se necesitan al menos dos AFNs para la concatenación (·).");
+        } 
+            // Pop two NFAs (el orden debe ser así: 2 -> 1, si no da error esta cosa)
+            NFA at2 = stack.pop();
+            NFA at1 = stack.pop();
+
+            // Epsilon transition: final del primero -> inicial del segundo
+            at1.endState.transitions.add(new Transition(null, at2.startState));
+            // At1's old end state is no longer final
+            at1.endState.isFinal = false;
+
+            // Push the new NFA onto the stack
+            stack.push(new NFA(at1.startState, at2.endState));
+
     }
 
     /**
@@ -192,27 +195,33 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleUnion(Stack<NFA> stack) {
-        // TODO: Implement handleUnion
         // Pseudocode: Pop two NFAs, create new start/end, add epsilon transitions for union
-
         if (stack.size() < 2) {
-            throw new IllegalStateException("Not enough NFAs for union");
-        }
+            throw new IllegalStateException("Error: Se necesitan al menos dos AFNs para la unión (|).");
+        } 
+            // Pop two NFAs
+            NFA at1 = stack.pop();
+            NFA at2 = stack.pop();
+
+            State inicialN = new State(); // New start state
+            State finalN = new State(); // New end state
+
+            // Epsilon transition: nuevo inicial -> inicial de a1
+            inicialN.transitions.add(new Transition(null, at1.startState));
+            // Epsilon transition: nuevo inicial -> inicial de a2
+            inicialN.transitions.add(new Transition(null, at2.startState));
+            // Epsilon transition: final de a1 -> nuevo final
+            at1.endState.transitions.add(new Transition(null, finalN));
+            // Epsilon transition: final de a2 -> nuevo final
+            at2.endState.transitions.add(new Transition(null, finalN));
+
+            // Old end states are no longer final ones
+            at1.endState.isFinal = false;
+            at2.endState.isFinal = false;
+
+            // Push the new NFA onto the stack
+            stack.push(new NFA(inicialN, finalN));
         
-        NFA second = stack.pop();
-        NFA first = stack.pop();
-        
-        
-        State newStart = new State();
-        State newEnd = new State();               
-        newStart.transitions.add(new Transition(null, first.startState));
-        newStart.transitions.add(new Transition(null, second.startState));            
-        first.endState.transitions.add(new Transition(null, newEnd));
-        second.endState.transitions.add(new Transition(null, newEnd));            
-        first.endState.isFinal = false;
-        second.endState.isFinal = false;
-        
-        stack.push(new NFA(newStart, newEnd));
     }
 
     /**
@@ -221,26 +230,34 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleKleeneStar(Stack<NFA> stack) {
-        // TODO: Implement handleKleeneStar
         // Pseudocode: Pop NFA, create new start/end, add transitions for zero or more repetitions
 
         if (stack.isEmpty()) {
-            throw new IllegalStateException("Stack is empty for Kleene star operation");
-        }
-        
-        NFA nfa = stack.pop();
-               
-        State newStart = new State();
-        State newEnd = new State();
-                
-        newStart.transitions.add(new Transition(null, nfa.startState));                
-        newStart.transitions.add(new Transition(null, newEnd));        
+            throw new IllegalStateException("Error: La pila está vacía. No es posible usar la 'Estrella de Kleene' (*).");
+        } 
+            State inicioN = new State(); // New start state
+            State finalN = new State(); // New end state
 
-        nfa.endState.transitions.add(new Transition(null, nfa.startState));    
-        nfa.endState.transitions.add(new Transition(null, newEnd));        
-        nfa.endState.isFinal = false;
+            NFA atfn = stack.pop(); // Pop the NFA to apply Kleene star to
+
+            // Epsilon transition: nuevo inicial -> nuevo final (cero repeticiones)
+            inicioN.transitions.add(new Transition(null, finalN));
+
+            // Epsilon transition: nuevo inicial -> incial anterior
+            inicioN.transitions.add(new Transition(null, atfn.startState));
+
+            // Epsilon transition: final antrior -> inicial anterior
+            atfn.endState.transitions.add(new Transition(null, atfn.startState));
+
+            // Epsilon transition: final anterior -> nuevo final
+            atfn.endState.transitions.add(new Transition(null, finalN));
+
+            // Old end state is no longer final
+            atfn.endState.isFinal = false;
+
+            // Push the new NFA onto the stack
+            stack.push(new NFA(inicioN, finalN));
         
-        stack.push(new NFA(newStart, newEnd));
     }
 
     /**
@@ -249,9 +266,11 @@ public class RegexParser {
      * @return True if the character is an operand, false if it is an operator.
      */
     private boolean isOperand(char c) {
-        // TODO: Implement isOperand
         // Pseudocode: Return true if c is not an operator
-
-        return c != '|' && c != '*' && c != '?' && c != '+' && c != '(' && c != ')' && c != '·';
+        if (c == '|' || c == '·' || c == '*' || c == '?' || c == '+') {
+            return false;
+        } else {
+            return true;
+        }
     }
 }
