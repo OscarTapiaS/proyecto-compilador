@@ -19,9 +19,8 @@ public class StaticAnalyzer {
     private final Map<Symbol, Set<Symbol>> firstSets;
     private final Map<Symbol, Set<Symbol>> followSets;
     
-    // Symbols for epsilon   
-
-    private static  Symbol epsilon = new Symbol("Îµ", SymbolType.TERMINAL); 
+    // Epsilon symbol 
+    private static Symbol epsilon = new Symbol("ε", SymbolType.TERMINAL);
     
 
     public StaticAnalyzer(Grammar grammar) {
